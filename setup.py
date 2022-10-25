@@ -5,7 +5,7 @@ setup(
     author="VitriSnake",
     author_email="vitrisnake@gmail.com",
     name="PyCrossTheAge",
-    packages=["pycrosstheage"],
+    packages=["pycrosstheages"],
     url="https://matrix.to/#/@vitrisnake-dev:matrix.org",
     version="0.1.0",
 )
