@@ -1,9 +1,13 @@
 from unicodedata import name
+from unittest import expectedFailure
 import pydantic
 import typing
 import ipdb
 import prettytable as pt 
 #from prettytable import PrettyTable, ALL
+
+class CardNotFoundError(Exception):
+    pass
 
 class Card(pydantic.BaseModel):
     name: str = pydantic.Field(None, description="Card name")
@@ -20,8 +24,8 @@ class CTACard(Card):
         table.field_names = ['Name', 'Element', 'Value', 'Rarity', 'Grade']
         table.add_row([self.name, self.element, self.value, self.rarity, self.grade])
         return table
-    
-class player(pydantic.BaseModel):
+
+class CTAPlayer(pydantic.BaseModel):
     name: str = pydantic.Field(..., description="Player's name")
     deck: typing.List[CTACard] = pydantic.Field([], description="Player's deck")
 
@@ -34,8 +38,6 @@ class player(pydantic.BaseModel):
         return """Player's name: {0}\nPlayer's deck: \n{1}""".format(self.name, table)
 
 class board(pydantic.BaseModel):
-
-
     board: typing.List[CTACard] = \
         pydantic.Field([None]*16, description="Card grade")
 
@@ -43,16 +45,18 @@ class board(pydantic.BaseModel):
         return self.board[x+4*y]
 
     def set_card(self, x, y, card):
-        
         self.board[x+4*y] = card
 
     def display(self):
         table = pt.PrettyTable()
         table.header = False
-        table.hrules = pt.ALL
         for i in range(4):
             table.add_row([
                 self.get_card(i, j).name if not(self.get_card(i, j) is None) else ""
                 for j in range(4)])
         
         return table
+
+class CTACardIngame(CTACard):
+    player_name: str = pydantic.Field(None, description="The owner name of the card")
+    value_in_game: int = pydantic.Field(None, description="Card value in game")
