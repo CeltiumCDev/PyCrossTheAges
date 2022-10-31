@@ -1,35 +1,72 @@
+import pytest
 import core
+import math
 import ipdb
+import random
 
-card = core.CTACard(
-    name="truc",
-    value=3000000000,
-)
+def test_Card():
+    C = core.Card(name="Carte simple")
+    assert C.name == "Carte simple"
 
-card_list = [core.CTACard(
-    name="truc",
-    value=3000000000,
-), core.CTACard(
-    name="truc",
-    value=3000000000,
-), core.CTACard(
-    name="truc",
-    value=3000000000,
-), core.CTACard(
-    name="truc",
-    value=3000000000,
-), core.CTACard(
-    name="truc",
-    value=3000000000,
-)]
+def test_CTACard():
+
+    deck = []
+    nb_cards = 10
+    for i in range(nb_cards):
+        C = core.CTACard(
+                name=f"Carte{i}",
+                value=100*i)
+        deck.append(C)
+
+    assert len(deck) == nb_cards
+
+def test_CTACard_str():
+
+    C = core.CTACard(
+                name=f"Carte test",
+                value=100)
 
 
+    assert str(C) == '\x1b[1m\x1b[38;5;170mCarte test\x1b[0m | \x1b[1m\x1b[38;5;3m100\x1b[0m'
 
-player  = core.player(name="player1", deck=card_list)
-board = core.board()
-board.set_card(x=2, y=2, card=core.CTACard(
-    name="truc",
-    value=3000000000,
-))
-print(board.display())
+def test_game():
+    deck = []
+    nb_cards = 10
+    for i in range(nb_cards):
+        C = core.CTACard(
+                name=f"Carte{i}",
+                value=100*i)
+        deck.append(C)
+    
+    game = core.Game()
 
+    player = core.CTAPlayer(name="test", deck=deck)
+    game.set_player1(player=player)
+
+def test_play_card():
+    deck = []
+    nb_cards = 100
+    for i in range(nb_cards):
+        C = core.CTACard(
+                name=f"Carte{i}",
+                value=100*i,
+                element="Element"+str(i),
+                rarity="gold")
+        deck.append(C)
+    
+    game = core.Game()
+
+    player1 = core.CTAPlayer(name="p1", deck=deck)
+    player2 = core.CTAPlayer(name="p2", deck=deck)
+
+    game.set_player1(player=player1)
+    game.set_player2(player=player2)
+    
+    passage = 0
+    for x in range(4):
+        for y in range(4):
+            game.play_card(random.randint(1, 2), passage, y, x)
+            game.board.grid[passage].owner = random.randint(1, 2)
+            passage += 1
+
+    print("\n"+str(game.board.display()))
