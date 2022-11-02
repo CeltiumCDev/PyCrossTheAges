@@ -1,0 +1,16 @@
+graph G {
+	air -- darkness
+	air -- nature
+	nature -- water
+	nature -- earth
+	earth -- fire
+	earth -- darkness
+	light -- earth
+	light -- air
+	fire -- light
+	fire -- nature
+	water -- air
+	water -- fire
+	darkness -- water
+	darkness -- light
+}

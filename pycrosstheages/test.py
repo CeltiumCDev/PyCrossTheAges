@@ -69,4 +69,6 @@ def test_play_card():
             game.board.grid[passage].owner = random.randint(1, 2)
             passage += 1
 
-    print("\n"+str(game.board.display()))
+
+    assert game.check_game_finish() == True
+

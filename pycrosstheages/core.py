@@ -1,4 +1,5 @@
 
+from http.client import CannotSendHeader
 from sys import int_info
 import colored
 import pydantic
@@ -19,8 +20,37 @@ CARD_COLOR_DEFAULT = \
         "owner": "white",
         "value_current": "yellow"
     }
+CTA_CARDS_ADVANTAGE = \
+                {"air": ["nature", "darkness"], 
+                 "nature": ["earth", "water"], 
+                 "earth": ["darkness", "fire"], 
+                 "light": ["air", "earth"], 
+                 "fire": ["nature", 'light'], 
+                 "water": ["fire", "air"], 
+                 "darkness": ["light", "water"]}
+
+CTA_CARD_SIMPLE_AFFINITYS = \
+                {"air": ["fire", "earth"], 
+                 "nature": ["light", "darkness"], 
+                 "earth": ["air", "water"], 
+                 "light": ["water", "nature"], 
+                 "fire": ["air", 'darkness'], 
+                 "water": ["earth", "light"], 
+                 "darkness": ["fire", "nature"]}
+
+CTA_CARD_DOUBLE_AFFINITYS= \
+                {"air": ["light", "nature"], 
+                 "nature": ["air", "earth"], 
+                 "earth": ["nature", "darkness"], 
+                 "light": ["air", "fire"], 
+                 "fire": ["water", 'light'], 
+                 "water": ["darkness", "fire"], 
+                 "darkness": ["earth", "water"]}
+
 
 class CardNotFoundError(Exception):
+    pass
+class CantPlayError(Exception):
     pass
 
 class Card(pydantic.BaseModel):
@@ -58,28 +88,6 @@ class CTACard(Card):
     rarity: str = pydantic.Field(None, description="Card rarity")
     grade: str = pydantic.Field(None, description="Card grade")
 
-    # def to_str_list_fmt(self, exclude=[], color={}):
-    
-    #     obj_liststr = super().to_str_list_fmt(exclude, color)
-
-    #     colors_dict = CARD_COLOR_DEFAULT.copy()
-    #     colors_dict.update(color)
-    
-    #     attr_list = ['element', 'value', 'rarity', 'grade']
-    #     for attr in attr_list:
-    #         attr_obj = getattr(self, attr)
-    #         if not(attr in exclude) and not(attr_obj is None):
-    #             attr_str = colored.stylize(
-    #                 attr_obj,
-    #                 styles=colored.attr("bold") + colored.fg(colors_dict.get(attr))
-    #             )
-
-    #             obj_liststr.append(attr_str)
-                
-    #     return obj_liststr
-
-
-
     def display(self):
         table = pt.PrettyTable()
         table.field_names = ['Name', 'Element', 'Value', 'Rarity', 'Grade']
@@ -103,13 +111,14 @@ class CTACardIngame(CTACard):
     player_name: str = pydantic.Field(None, description="The owner name of the card")
     value_current: int = pydantic.Field(None, description="Card value in game")
     owner: int = pydantic.Field(0, description="The card owner durning the game")
+    is_leader: bool = pydantic.Field(False, description="The card is the leader of the game?")
 
     def __init__(self, **kwrds):
         super().__init__(**kwrds)
         self.value_current = self.value
 
     def to_str_list_fmt(self, exclude=[], color={}):
-        return super().to_str_list_fmt(exclude=exclude + ["owner"], 
+        return super().to_str_list_fmt(exclude=exclude + ["owner", "is_leader"], 
             color=color)
 
     def display(self):
@@ -162,7 +171,40 @@ class Game(pydantic.BaseModel):
         self.player2 = self.add_player(player=player)
 
     def play_card(self, player_num, card_num, x, y):
+        if self.check_game_finish == True:
+            raise CantPlayError('The game is already finished.')
         player = self.player1 if player_num == 1 else self.player2
         card = player.deck.pop(card_num)
         self.board.set_card(card, x, y)
 
+    def check_game_finish(self):
+        return not(any([x is None for x in self.board.grid]))
+
+    def update_affinitys(self, x, y): 
+        for x in range(0, 3):
+            for y in range(0, 3):
+                neighbours = [[x+1, y+1], [x+1, y-1], [x-1, y+1], [x-1, y-1]]
+                card = self.board.get_card(x, y)
+                for co in neighbours:
+                    n_card = self.board.get_card(co[0], co[1])
+                    if n_card.element in CTA_CARD_SIMPLE_AFFINITYS[card.element]:
+                        card.value_current += 100
+
+    def attack(self, x, y, card):
+        cos_to_check = [[x+1, y+1], [x+1, y-1], [x-1, y+1], [x-1, y-1]]
+
+        for co in cos_to_check:
+            card = card.copy()
+            # Check x+1 y+1 card
+            if not(co[0] > 4 or co[1] > 4) and not(self.board.get_card(co[0], co[1]) == None):
+                card_attacked = self.board.get_card(co[0], co[1])
+            
+                # Check ability
+                if card_attacked.element in CTA_CARDS_ADVANTAGE[card.element]:
+                    card.value_current += 150
+
+                # Launch attack
+                if card.value_current > card_attacked.value_current:
+                    self.board.set_card(co[0], co[1], card_attacked.owner == card.owner)
+                    self.attack(co[0], co[1], self.board.get_card(co[0], co[1]))
+            
